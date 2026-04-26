@@ -33,7 +33,7 @@ This project transforms raw operational aviation data (2015 US Flight Dataset) i
 ---
 
 ## 🚀 How to Run
-1.  Clone the repository: `git clone https://github.com/[Your-Username]/Airline_project.git`
+1.  Clone the repository: `https://github.com/somia-moslhy/Aviation_Crisis_Management_Simulation.git`
 2.  Install dependencies: `pip install pandas numpy plotly`
 3.  Download the dataset from [Kaggle: 2015 Flight Delays](https://www.kaggle.com/datasets/usdot/flight-delays).
 4.  Run the notebook: `Aviation_Crisis_Management_Simulation.ipynb`
