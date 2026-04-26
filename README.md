@@ -26,7 +26,6 @@ This project transforms raw operational aviation data (2015 US Flight Dataset) i
 ---
 
 ## 📊 Visualizations & Results
-*(Optional: Add your screenshot links here)*
 - **Loss vs. Profit:** A macro view of the economic earthquake.
 - **The Reputation Impact:** Why brand-tiering changes the financial outcome.
 
