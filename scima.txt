@@ -1,13 +1,13 @@
-🏢 جدول الشركات [Airlines]
+🏢  [Airlines]
  +-----------------------------------+
  | 🔑 IATA_CODE (Primary Key)        | ──────┐
  |    AIRLINE                        |       │
  +-----------------------------------+       │
                                              │ (1 to Many)
                                              ▼
- ✈️ جدول الرحلات (المركزي) [Flights]
+ ✈️  [Flights]
  +-----------------------------------+
- | 📅 تواريخ ومعرفات:                |
+ | 📅              |
  |    YEAR                           |
  |    MONTH                          |
  |    DAY                            |
@@ -18,32 +18,32 @@
  | 🔗 ORIGIN_AIRPORT (Foreign Key)   | ◄─────┐
  | 🔗 DESTINATION_AIRPORT (Foreign Key)◄───┐ │
  |                                   |     │ │
- | 🛫 الإقلاع:                       |     │ │
+ | 🛫                      |     │ │
  |    SCHEDULED_DEPARTURE            |     │ │
  |    DEPARTURE_TIME                 |     │ │
  |    DEPARTURE_DELAY                |     │ │
  |    TAXI_OUT                       |     │ │
  |    WHEELS_OFF                     |     │ │
  |                                   |     │ │
- | ⏱️ مدة الرحلة والمسافة:           |     │ │
+ | ⏱️            |     │ │
  |    SCHEDULED_TIME                 |     │ │
  |    ELAPSED_TIME                   |     │ │
  |    AIR_TIME                       |     │ │
  |    DISTANCE                       |     │ │
  |                                   |     │ │
- | 🛬 الوصول:                        |     │ │
+ | 🛬                        |     │ │
  |    WHEELS_ON                      |     │ │
  |    TAXI_IN                        |     │ │
  |    SCHEDULED_ARRIVAL              |     │ │
  |    ARRIVAL_TIME                   |     │ │
  |    ARRIVAL_DELAY                  |     │ │
  |                                   |     │ │
- | 🚨 الأزمات والمشاكل:              |     │ │
+ | 🚨              |     │ │
  |    DIVERTED                       |     │ │
  |    CANCELLED                      |     │ │
  |    CANCELLATION_REASON            |     │ │
  |                                   |     │ │
- | ⏳ تفاصيل التأخير:                |     │ │
+ | ⏳               |     │ │
  |    AIR_SYSTEM_DELAY               |     │ │
  |    SECURITY_DELAY                 |     │ │
  |    AIRLINE_DELAY                  |     │ │
@@ -51,7 +51,7 @@
  |    WEATHER_DELAY                  |     │ │
  +-----------------------------------+     │ │
                                            │ │
- 🛬 جدول المطارات [Airports]               │ │
+ 🛬   [Airports]               │ │
  +-----------------------------------+     │ │
  | 🔑 IATA_CODE (Primary Key)        | ────┴─┘ (1 to Many)
  |    AIRPORT                        |
