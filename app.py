@@ -96,11 +96,11 @@ tab1, tab2, tab3 = st.tabs(["Financial Analysis", "Operations", "Crisis Map"])
 with tab1:
     st.write("### Revenue vs Loss Analysis")
     c1, c2 = st.columns(2)
-    loss = f_df.groupby('ORIGIN_AIRPORT_NAME')['CANCELLED'].sum() * 50000
+    loss = f_df.groupby('ORIGIN_AIRPORT_NAME')['CANCELLED'].sum().astype('int64') * 50000
     with c1:
         st.plotly_chart(px.bar(loss.sort_values(ascending=False).head(10), title="Airline Losses", color_discrete_sequence=['#FF4B4B'], template="plotly_dark"), use_container_width=True)
     with c2:
-        gain = f_df.groupby('DEST_AIRPORT_NAME')['DIVERTED'].sum() * 15000
+        gain = f_df.groupby('DEST_AIRPORT_NAME')['DIVERTED'].sum().astype('int64') * 15000
         st.plotly_chart(px.bar(gain.sort_values(ascending=False).head(10), title="Airport Gains", color_discrete_sequence=['#00D4FF'], template="plotly_dark"), use_container_width=True)
 
 with tab2:
