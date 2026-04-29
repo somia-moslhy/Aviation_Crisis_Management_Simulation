@@ -11,22 +11,18 @@ from geopy.extra.rate_limiter import RateLimiter
 # 1. Page Configuration
 st.set_page_config(page_title="Aviation Crisis BI", layout="wide", initial_sidebar_state="expanded")
 
-# --- التعديل السحري للـ CSS عشان تكبير الخط وتوسيع المسافات ---
 st.markdown("""
     <style>
-    /* تكبير خط التبويبات وتغيير شكلها */
     button[data-baseweb="tab"] p {
         font-size: 24px !format;
         font-weight: bold !important;
         color: white !important;
     }
-    /* توسيط التبويبات */
     .stTabs [data-baseweb="tab-list"] {
         display: flex;
         justify-content: center;
         gap: 50px;
     }
-    /* تنسيق كروت الـ KPIs */
     div[data-testid="metric-container"] {
         background-color: #111;
         padding: 20px;
@@ -57,7 +53,6 @@ def load_data():
         cols = ['MONTH', 'ORIGIN_AIRPORT_NAME', 'DEST_AIRPORT_NAME', 'CANCELLED', 'DIVERTED', 'TAXI_OUT', 'WEATHER_DELAY', 'TAXI_IN']
         df = pd.read_csv(file_name, usecols=lambda c: c in cols)
         
-        # استخدام المكتبة لجلب الإحداثيات
         unique_airports = list(df['ORIGIN_AIRPORT_NAME'].dropna().unique())
         coords_dict = fetch_coordinates_with_library(unique_airports)
         
@@ -125,15 +120,13 @@ with tab2:
 with tab3:
     st.write("### Geographic Crisis Explorer")
     
-    # --- التعديل: الخريطة بعرض الصفحة بالكامل وبارتفاع أكبر ---
     map_data = f_df.dropna(subset=['LATITUDE', 'LONGITUDE']).groupby(['ORIGIN_AIRPORT_NAME', 'LATITUDE', 'LONGITUDE']).agg({'CANCELLED':'sum', 'TAXI_OUT':'mean'}).reset_index()
     if not map_data.empty:
         fig_map = px.scatter_geo(map_data, lat='LATITUDE', lon='LONGITUDE', size='CANCELLED', color='TAXI_OUT', 
                                  hover_name='ORIGIN_AIRPORT_NAME', scope='usa', template="plotly_dark",
                                  color_continuous_scale='YlOrRd')
-        # تكبير حجم الرسمة يدوياً
         fig_map.update_layout(height=700, margin={"r":0,"t":50,"l":0,"b":0})
-        st.plotly_chart(fig_map, use_container_width=True) # تأكيد عرض الصفحة بالكامل
+        st.plotly_chart(fig_map, use_container_width=True) 
     
     c5, c6 = st.columns(2)
     with c5:
