@@ -14,7 +14,7 @@ st.set_page_config(page_title="Aviation Crisis BI", layout="wide", initial_sideb
 st.markdown("""
     <style>
     button[data-baseweb="tab"] p {
-        font-size: 24px !format;
+        font-size: 24px !important;
         font-weight: bold !important;
         color: white !important;
     }
@@ -48,10 +48,10 @@ def fetch_coordinates_with_library(_unique_airports):
 
 @st.cache_data
 def load_data():
-    file_name = 'Cleaned_Airlines_Crisis.csv'
+    file_name = 'Cleaned_Airlines_Crisis.parquet'
     if os.path.exists(file_name):
         cols = ['MONTH', 'ORIGIN_AIRPORT_NAME', 'DEST_AIRPORT_NAME', 'CANCELLED', 'DIVERTED', 'TAXI_OUT', 'WEATHER_DELAY', 'TAXI_IN']
-        df = pd.read_csv(file_name, usecols=lambda c: c in cols)
+        df = pd.read_parquet(file_name, columns=cols)
         
         unique_airports = list(df['ORIGIN_AIRPORT_NAME'].dropna().unique())
         coords_dict = fetch_coordinates_with_library(unique_airports)
