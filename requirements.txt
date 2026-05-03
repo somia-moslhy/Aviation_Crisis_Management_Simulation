@@ -1,6 +1,5 @@
-pandas>=1.3.0
-numpy>=1.20.0
-plotly>=5.0.0
-jupyter>=1.0.0
 streamlit
-geopy
+pandas
+plotly
+pyarrow
+fastparquet
