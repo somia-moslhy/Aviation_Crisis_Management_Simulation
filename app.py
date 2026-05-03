@@ -7,7 +7,7 @@ from plotly.subplots import make_subplots
 # 1. Page Configuration
 st.set_page_config(page_title="Aviation Crisis BI", layout="wide", initial_sidebar_state="expanded")
 
-# 2. CSS for Light/Dark Mode (Bulletproof visibility)
+# 2. CSS for Light/Dark Mode (No Emojis, High Visibility)
 def apply_theme(theme_choice):
     if theme_choice == "Dark":
         st.markdown("""
@@ -41,7 +41,7 @@ def load_data():
 
 df = load_data()
 
-# 4. Sidebar Controls (Power BI Logic: Empty = Select All)
+# 4. Sidebar Controls (Removed Destination Airport Filter)
 st.sidebar.header("Dashboard Controls")
 theme_choice = st.sidebar.radio("Theme Mode", ["Dark", "Light"])
 apply_theme(theme_choice)
@@ -50,17 +50,15 @@ st.sidebar.divider()
 month_map = {1:'Jan', 2:'Feb', 3:'Mar', 4:'Apr', 5:'May', 6:'Jun', 
              7:'Jul', 8:'Aug', 9:'Sep', 10:'Oct', 11:'Nov', 12:'Dec'}
 
-sel_months = st.sidebar.multiselect("Months", options=list(month_map.keys()), default=[], format_func=lambda x: month_map[x], help="Leave empty to select all")
-sel_airlines = st.sidebar.multiselect("Airlines", options=sorted(df['AIRLINE_NAME'].unique()), default=[], help="Leave empty to select all")
-sel_origins = st.sidebar.multiselect("Origin Airports", options=sorted(df['ORIGIN_AIRPORT_NAME'].unique()), default=[], help="Leave empty to select all")
-sel_dests = st.sidebar.multiselect("Destination Airports", options=sorted(df['DEST_AIRPORT_NAME'].unique()), default=[], help="Leave empty to select all")
+sel_months = st.sidebar.multiselect("Months", options=list(month_map.keys()), default=[], format_func=lambda x: month_map[x])
+sel_airlines = st.sidebar.multiselect("Airlines", options=sorted(df['AIRLINE_NAME'].unique()), default=[])
+sel_origins = st.sidebar.multiselect("Origin Airports", options=sorted(df['ORIGIN_AIRPORT_NAME'].unique()), default=[])
 
-# Smart Filtering (If list is empty, don't filter)
+# Filtering Logic (Updated)
 f_df = df.copy()
 if sel_months: f_df = f_df[f_df['MONTH'].isin(sel_months)]
 if sel_airlines: f_df = f_df[f_df['AIRLINE_NAME'].isin(sel_airlines)]
 if sel_origins: f_df = f_df[f_df['ORIGIN_AIRPORT_NAME'].isin(sel_origins)]
-if sel_dests: f_df = f_df[f_df['DEST_AIRPORT_NAME'].isin(sel_dests)]
 
 # 5. Dashboard View
 st.title("Aviation Crisis Management Simulation")
@@ -91,12 +89,37 @@ if not f_df.empty:
             loss = f_df.groupby('AIRLINE_NAME')['CANCELLED'].sum().nlargest(10) * 50000
             st.plotly_chart(px.bar(loss, title="Top 10 Airline Losses", 
                                    template="plotly_dark" if theme_choice=="Dark" else "plotly_white", 
-                                   color_discrete_sequence=['#FF4B4B']), use_container_width=True)
+                                   color_discrete_sequence=['#FF4B4B']), use_container_width=True, key="fin_loss_bar")
         with c2:
             gain = f_df.groupby('DEST_AIRPORT_NAME')['DIVERTED'].sum().nlargest(10) * 15000
             st.plotly_chart(px.bar(gain, title="Top 10 Airport Revenue Gains", 
                                    template="plotly_dark" if theme_choice=="Dark" else "plotly_white", 
-                                   color_discrete_sequence=['#00D4FF']), use_container_width=True)
+                                   color_discrete_sequence=['#00D4FF']), use_container_width=True, key="fin_gain_bar")
+
+        st.divider()
+        
+        c_trend, c_margin = st.columns(2)
+        with c_trend:
+            month_trend = f_df.groupby('MONTH')['CANCELLED'].sum().reset_index()
+            month_trend['Month_Name'] = month_trend['MONTH'].map(month_map)
+            fig_month_fin = px.line(month_trend, x='Month_Name', y='CANCELLED', title="Monthly Financial Impact Trend",
+                                    template="plotly_dark" if theme_choice=="Dark" else "plotly_white", markers=True)
+            st.plotly_chart(fig_month_fin, use_container_width=True, key="fin_month_line")
+            
+        with c_margin:
+            airline_fin = f_df.groupby('AIRLINE_NAME').agg(Total_Flights=('CANCELLED', 'count'), Total_Cancellations=('CANCELLED', 'sum')).reset_index()
+            airline_fin['Est_Revenue'] = airline_fin['Total_Flights'] * 20000
+            airline_fin['Est_Loss'] = airline_fin['Total_Cancellations'] * 50000
+            top_airlines_margin = airline_fin.nlargest(10, 'Est_Revenue')
+            
+            fig_margin = go.Figure()
+            fig_margin.add_trace(go.Bar(x=top_airlines_margin['AIRLINE_NAME'], y=top_airlines_margin['Est_Revenue'], 
+                                        name='Estimated Revenue', marker_color='#00D4FF' if theme_choice=="Dark" else '#007BFF'))
+            fig_margin.add_trace(go.Bar(x=top_airlines_margin['AIRLINE_NAME'], y=top_airlines_margin['Est_Loss'], 
+                                        name='Crisis Loss', marker_color='#FF4B4B'))
+            fig_margin.update_layout(title="<b>The Margin Killer: Estimated Revenue vs Crisis Loss</b>",
+                                     barmode='group', template="plotly_dark" if theme_choice=="Dark" else "plotly_white", hovermode='x unified')
+            st.plotly_chart(fig_margin, use_container_width=True, key="fin_margin_grouped")
 
     with tab_ops:
         c3, c4 = st.columns(2)
@@ -106,7 +129,7 @@ if not f_df.empty:
                 reasons = f_df[f_df['CANCELLED']==1]['CANCELLATION_REASON'].map(reason_map).value_counts().reset_index()
                 st.plotly_chart(px.pie(reasons, names='CANCELLATION_REASON', values='count', 
                                        title="Primary Reasons for Cancellation",
-                                       template="plotly_dark" if theme_choice=="Dark" else "plotly_white"), use_container_width=True)
+                                       template="plotly_dark" if theme_choice=="Dark" else "plotly_white"), use_container_width=True, key="ops_reason_pie")
         
         with c4:
             weather_impact = f_df.groupby('MONTH').agg(Avg_Weather_Delay=('WEATHER_DELAY', 'mean'), Avg_Taxi_Out=('TAXI_OUT', 'mean')).reset_index()
@@ -122,7 +145,7 @@ if not f_df.empty:
                                       template="plotly_dark" if theme_choice=="Dark" else "plotly_white", hovermode='x unified')
             fig_weather.update_yaxes(title_text="Weather Delay (Mins)", secondary_y=False)
             fig_weather.update_yaxes(title_text="Taxi-Out Time (Mins)", secondary_y=True)
-            st.plotly_chart(fig_weather, use_container_width=True)
+            st.plotly_chart(fig_weather, use_container_width=True, key="ops_weather_multi")
 
     with tab_map:
         map_agg = f_df.groupby(['ORIGIN_AIRPORT_NAME', 'ORIGIN_LATITUDE', 'ORIGIN_LONGITUDE']).agg({'CANCELLED':'sum', 'TAXI_OUT':'mean'}).reset_index()
@@ -131,7 +154,7 @@ if not f_df.empty:
                                  scope='usa', template="plotly_dark" if theme_choice=="Dark" else "plotly_white",
                                  color_continuous_scale='YlOrRd', title="Geographical Crisis Hotspots")
         fig_map.update_layout(height=750, margin={"r":0,"t":50,"l":0,"b":0})
-        st.plotly_chart(fig_map, use_container_width=True)
+        st.plotly_chart(fig_map, use_container_width=True, key="map_geo_scatter")
 
     with tab_data:
         st.dataframe(f_df, use_container_width=True)
