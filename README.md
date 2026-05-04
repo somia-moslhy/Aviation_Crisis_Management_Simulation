@@ -10,6 +10,8 @@ Built as a strategic framework, this project acts as a "Crisis Simulator" that h
 ## Quick Links
 * **Live Interactive Dashboard:** [View Streamlit App](https://aviationcrisismanagementsimulation-g8tdpjvenk879p6dtn4xc3.streamlit.app/)
 * **Executive Presentation (Pitch Deck):** [View Gamma Presentation](https://gamma.app/docs/Aviation-Crisis-Management-Financial-Impact-Operational-Efficienc-ku6jklysn7clket)
+* **Data Link in Kaggle:** [kaggle link](https://www.kaggle.com/datasets/usdot/flight-delays)
+
 
 ## Key Strategic Insights Discovered
 1. **The Margin Killer:** While major airlines lose higher absolute dollar amounts during crises, regional and budget airlines suffer a much more severe "Margin Erosion" relative to their total revenue.
