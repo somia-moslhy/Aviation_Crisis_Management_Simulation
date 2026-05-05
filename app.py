@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -60,6 +61,22 @@ if sel_months: f_df = f_df[f_df['MONTH'].isin(sel_months)]
 if sel_airlines: f_df = f_df[f_df['AIRLINE_NAME'].isin(sel_airlines)]
 if sel_origins: f_df = f_df[f_df['ORIGIN_AIRPORT_NAME'].isin(sel_origins)]
 
+# --- Financial Engineering Logic (Aligned with Notebook) ---
+# Handle missing DISTANCE column gracefully
+dist_col = f_df['DISTANCE'] if 'DISTANCE' in f_df.columns else 800 
+f_df['Estimated_Revenue'] = np.where(f_df['CANCELLED'] == 0, dist_col * 25, 0)
+
+premium_airlines = ['American Airlines Inc.', 'Delta Air Lines Inc.', 'United Air Lines Inc.', 'US Airways Inc.', 'Alaska Airlines Inc.']
+budget_airlines = ['Spirit Air Lines', 'Frontier Airlines Inc.']
+
+conditions = [
+    (f_df['CANCELLED'] == 1) & (f_df['AIRLINE_NAME'].isin(premium_airlines)),
+    (f_df['CANCELLED'] == 1) & (f_df['AIRLINE_NAME'].isin(budget_airlines)),
+    (f_df['CANCELLED'] == 1) # Standard/Regional
+]
+choices = [75000, 25000, 50000]
+f_df['Cancellation_Penalty'] = np.select(conditions, choices, default=0)
+
 # 5. Dashboard View
 st.title("Aviation Crisis Management Simulation")
 st.caption("Strategic Intelligence Dashboard - Operational and Financial Analysis")
@@ -69,7 +86,7 @@ if not f_df.empty:
     
     total_cancels = int(f_df['CANCELLED'].sum())
     total_diverts = int(f_df['DIVERTED'].sum())
-    airline_loss = total_cancels * 50000
+    airline_loss = f_df['Cancellation_Penalty'].sum()
     airport_gain = total_diverts * 15000
     
     k1.metric("Total Flights", f"{len(f_df):,}")
@@ -86,7 +103,7 @@ if not f_df.empty:
     with tab_fin:
         c1, c2 = st.columns(2)
         with c1:
-            loss = f_df.groupby('AIRLINE_NAME')['CANCELLED'].sum().nlargest(10) * 50000
+            loss = f_df.groupby('AIRLINE_NAME')['Cancellation_Penalty'].sum().nlargest(10)
             st.plotly_chart(px.bar(loss, title="Top 10 Airline Losses", 
                                    template="plotly_dark" if theme_choice=="Dark" else "plotly_white", 
                                    color_discrete_sequence=['#FF4B4B']), use_container_width=True, key="fin_loss_bar")
@@ -107,19 +124,49 @@ if not f_df.empty:
             st.plotly_chart(fig_month_fin, use_container_width=True, key="fin_month_line")
             
         with c_margin:
-            airline_fin = f_df.groupby('AIRLINE_NAME').agg(Total_Flights=('CANCELLED', 'count'), Total_Cancellations=('CANCELLED', 'sum')).reset_index()
-            airline_fin['Est_Revenue'] = airline_fin['Total_Flights'] * 20000
-            airline_fin['Est_Loss'] = airline_fin['Total_Cancellations'] * 50000
-            top_airlines_margin = airline_fin.nlargest(10, 'Est_Revenue')
+            airline_fin = f_df.groupby('AIRLINE_NAME').agg(
+                Total_Revenue=('Estimated_Revenue', 'sum'),
+                Total_Penalty=('Cancellation_Penalty', 'sum')
+            ).reset_index()
+            airline_fin['Loss_Pct'] = (airline_fin['Total_Penalty'] / airline_fin['Total_Revenue']) * 100
+            top_airlines_margin = airline_fin.nlargest(10, 'Total_Revenue')
             
             fig_margin = go.Figure()
-            fig_margin.add_trace(go.Bar(x=top_airlines_margin['AIRLINE_NAME'], y=top_airlines_margin['Est_Revenue'], 
+            fig_margin.add_trace(go.Bar(x=top_airlines_margin['AIRLINE_NAME'], y=top_airlines_margin['Total_Revenue'], 
                                         name='Estimated Revenue', marker_color='#00D4FF' if theme_choice=="Dark" else '#007BFF'))
-            fig_margin.add_trace(go.Bar(x=top_airlines_margin['AIRLINE_NAME'], y=top_airlines_margin['Est_Loss'], 
+            fig_margin.add_trace(go.Bar(x=top_airlines_margin['AIRLINE_NAME'], y=top_airlines_margin['Total_Penalty'], 
                                         name='Crisis Loss', marker_color='#FF4B4B'))
+            
+            # Adding percentage text for the manager
+            fig_margin.add_trace(go.Scatter(x=top_airlines_margin['AIRLINE_NAME'], y=top_airlines_margin['Total_Revenue'],
+                                            mode='text', text=top_airlines_margin['Loss_Pct'].apply(lambda x: f"{x:.1f}% Loss"),
+                                            textposition="top center", name="Margin Impact %"))
+            
             fig_margin.update_layout(title="<b>The Margin Killer: Estimated Revenue vs Crisis Loss</b>",
                                      barmode='group', template="plotly_dark" if theme_choice=="Dark" else "plotly_white", hovermode='x unified')
             st.plotly_chart(fig_margin, use_container_width=True, key="fin_margin_grouped")
+
+        st.divider()
+        # New section: Airport Diversion Windfall
+        st.subheader("The Diversion Windfall: Unplanned Airport Revenue")
+        c_div_1, c_div_2 = st.columns([1, 2])
+        with c_div_1:
+            st.info("""
+            **The Diversion Logic:** 
+            While airlines lose money on cancellations, diversions represent a revenue shift. 
+            Each diversion generates an estimated **$15,000** for the receiving airport in landing fees, fuel, and passenger services.
+            """)
+            st.metric("Total Diversion Windfall", format_currency(airport_gain))
+        
+        with c_div_2:
+            div_trend = f_df.groupby('MONTH')['DIVERTED'].sum().reset_index()
+            div_trend['Revenue_Gain'] = div_trend['DIVERTED'] * 15000
+            div_trend['Month_Name'] = div_trend['MONTH'].map(month_map)
+            fig_div = px.area(div_trend, x='Month_Name', y='Revenue_Gain', 
+                             title="Monthly Airport Revenue Influx (Diversions)",
+                             template="plotly_dark" if theme_choice=="Dark" else "plotly_white",
+                             color_discrete_sequence=['#00D4FF'])
+            st.plotly_chart(fig_div, use_container_width=True, key="fin_div_area")
 
     with tab_ops:
         c3, c4 = st.columns(2)
