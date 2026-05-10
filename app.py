@@ -35,10 +35,13 @@ def format_currency(value):
     if value >= 1e9: return f"${value/1e9:.2f}B"
     else: return f"${value/1e6:.1f}M"
 
-# 3. Data Loader
+# 3. Data Loader (Optimized for Streamlit Cloud RAM Limits)
 @st.cache_data
 def load_data():
-    return pd.read_parquet('Airlines_Dashboard_Slim.parquet')
+    df = pd.read_parquet('Airlines_Dashboard_Slim.parquet')
+    if len(df) > 100000:
+        df = df.sample(100000, random_state=42)
+    return df
 
 df = load_data()
 
@@ -56,14 +59,14 @@ sel_airlines = st.sidebar.multiselect("Airlines", options=sorted(df['AIRLINE_NAM
 sel_origins = st.sidebar.multiselect("Origin Airports", options=sorted(df['ORIGIN_AIRPORT_NAME'].unique()), default=[])
 
 # Filtering Logic (Updated)
-f_df = df.copy()
+f_df = df
 
 if sel_months: 
-    f_df = f_df[f_df['MONTH'].isin(sel_months)].copy()
+    f_df = f_df[f_df['MONTH'].isin(sel_months)]
 if sel_airlines: 
-    f_df = f_df[f_df['AIRLINE_NAME'].isin(sel_airlines)].copy()
+    f_df = f_df[f_df['AIRLINE_NAME'].isin(sel_airlines)]
 if sel_origins: 
-    f_df = f_df[f_df['ORIGIN_AIRPORT_NAME'].isin(sel_origins)].copy()
+    f_df = f_df[f_df['ORIGIN_AIRPORT_NAME'].isin(sel_origins)]
     
 # --- Financial Engineering Logic (Aligned with Notebook) ---
 dist_col = f_df['DISTANCE'] if 'DISTANCE' in f_df.columns else 800 
@@ -119,12 +122,12 @@ if not f_df.empty:
             st.plotly_chart(px.bar(loss, title="Top 10 Airline Losses", 
                        template="plotly_dark" if theme_choice=="Dark" else "plotly_white", 
                        color_discrete_sequence=['#FF4B4B']), 
-                use_container_width=True)
+                width="stretch")
         with c2:
             gain = f_df.groupby('DEST_AIRPORT_NAME')['DIVERTED'].sum().nlargest(10) * 15000
             st.plotly_chart(px.bar(gain, title="Top 10 Airport Revenue Gains", 
                                    template="plotly_dark" if theme_choice=="Dark" else "plotly_white", 
-                                   color_discrete_sequence=['#00D4FF']), use_container_width=True, key="fin_gain_bar")
+                                   color_discrete_sequence=['#00D4FF']), width="stretch", key="fin_gain_bar")
 
         st.divider()
         
@@ -134,7 +137,7 @@ if not f_df.empty:
             month_trend['Month_Name'] = month_trend['MONTH'].map(month_map)
             fig_month_fin = px.line(month_trend, x='Month_Name', y='CANCELLED', title="Monthly Financial Impact Trend",
                                     template="plotly_dark" if theme_choice=="Dark" else "plotly_white", markers=True)
-            st.plotly_chart(fig_month_fin, use_container_width=True, key="fin_month_line")
+            st.plotly_chart(fig_month_fin, width="stretch", key="fin_month_line")
             
         with c_margin:
             airline_fin = f_df.groupby('AIRLINE_NAME').agg(
@@ -160,7 +163,7 @@ if not f_df.empty:
             
             fig_margin.update_layout(title="<b>The Margin Killer: Estimated Revenue vs Crisis Loss</b>",
                                      barmode='group', template="plotly_dark" if theme_choice=="Dark" else "plotly_white", hovermode='x unified')
-            st.plotly_chart(fig_margin, use_container_width=True, key="fin_margin_grouped")
+            st.plotly_chart(fig_margin, width="stretch", key="fin_margin_grouped")
 
         st.divider()
         # Added the "Real Impact" Chart from the notebook to the dashboard
@@ -172,7 +175,7 @@ if not f_df.empty:
                             color='loss_percentage', color_continuous_scale='Reds',
                             template="plotly_dark" if theme_choice=="Dark" else "plotly_white")
         fig_impact.update_layout(yaxis={'categoryorder':'total ascending'})
-        st.plotly_chart(fig_impact, use_container_width=True, key="fin_impact_bar")
+        st.plotly_chart(fig_impact, width="stretch", key="fin_impact_bar")
 
         st.divider()
         # New section: Airport Diversion Windfall
@@ -194,7 +197,7 @@ if not f_df.empty:
                              title="Monthly Airport Revenue Influx (Diversions)",
                              template="plotly_dark" if theme_choice=="Dark" else "plotly_white",
                              color_discrete_sequence=['#00D4FF'])
-            st.plotly_chart(fig_div, use_container_width=True, key="fin_div_area")
+            st.plotly_chart(fig_div, width="stretch", key="fin_div_area")
 
     with tab_ops:
         c3, c4 = st.columns(2)
@@ -204,7 +207,7 @@ if not f_df.empty:
                 reasons = f_df[f_df['CANCELLED']==1]['CANCELLATION_REASON'].map(reason_map).value_counts().reset_index()
                 st.plotly_chart(px.pie(reasons, names='CANCELLATION_REASON', values='count', 
                                        title="Primary Reasons for Cancellation",
-                                       template="plotly_dark" if theme_choice=="Dark" else "plotly_white"), use_container_width=True, key="ops_reason_pie")
+                                       template="plotly_dark" if theme_choice=="Dark" else "plotly_white"), width="stretch", key="ops_reason_pie")
         
         with c4:
             weather_impact = f_df.groupby('MONTH').agg(Avg_Weather_Delay=('WEATHER_DELAY', 'mean'), Avg_Taxi_Out=('TAXI_OUT', 'mean')).reset_index()
@@ -220,7 +223,7 @@ if not f_df.empty:
                                       template="plotly_dark" if theme_choice=="Dark" else "plotly_white", hovermode='x unified')
             fig_weather.update_yaxes(title_text="Weather Delay (Mins)", secondary_y=False)
             fig_weather.update_yaxes(title_text="Taxi-Out Time (Mins)", secondary_y=True)
-            st.plotly_chart(fig_weather, use_container_width=True, key="ops_weather_multi")
+            st.plotly_chart(fig_weather, width="stretch", key="ops_weather_multi")
 
     with tab_map:
         map_agg = f_df.groupby(['ORIGIN_AIRPORT_NAME', 'ORIGIN_LATITUDE', 'ORIGIN_LONGITUDE']).agg({'CANCELLED':'sum', 'TAXI_OUT':'mean'}).reset_index()
@@ -229,7 +232,7 @@ if not f_df.empty:
                                  scope='usa', template="plotly_dark" if theme_choice=="Dark" else "plotly_white",
                                  color_continuous_scale='YlOrRd', title="Geographical Crisis Hotspots")
         fig_map.update_layout(height=750, margin={"r":0,"t":50,"l":0,"b":0})
-        st.plotly_chart(fig_map, use_container_width=True, key="map_geo_scatter")
+        st.plotly_chart(fig_map, width="stretch", key="map_geo_scatter")
 
     with tab_data:
         st.dataframe(f_df, use_container_width=True)
