@@ -57,14 +57,26 @@ sel_origins = st.sidebar.multiselect("Origin Airports", options=sorted(df['ORIGI
 
 # Filtering Logic (Updated)
 f_df = df.copy()
-if sel_months: f_df = f_df[f_df['MONTH'].isin(sel_months)]
-if sel_airlines: f_df = f_df[f_df['AIRLINE_NAME'].isin(sel_airlines)]
-if sel_origins: f_df = f_df[f_df['ORIGIN_AIRPORT_NAME'].isin(sel_origins)]
 
+if sel_months: 
+    f_df = f_df[f_df['MONTH'].isin(sel_months)].copy()
+if sel_airlines: 
+    f_df = f_df[f_df['AIRLINE_NAME'].isin(sel_airlines)].copy()
+if sel_origins: 
+    f_df = f_df[f_df['ORIGIN_AIRPORT_NAME'].isin(sel_origins)].copy()
+    
 # --- Financial Engineering Logic (Aligned with Notebook) ---
-# Handle missing DISTANCE column gracefully
 dist_col = f_df['DISTANCE'] if 'DISTANCE' in f_df.columns else 800 
-f_df['Estimated_Revenue'] = np.where(f_df['CANCELLED'] == 0, dist_col * 25, 0)
+w_delay = f_df['WEATHER_DELAY'].fillna(0) if 'WEATHER_DELAY' in f_df.columns else 0
+is_normal = (f_df['CANCELLED'] == 0) & (f_df['DIVERTED'] == 0) & (w_delay == 0)
+
+# UPSCALING LOGIC: 100% of cancellations are here, but only 5% of normal flights.
+# To get an accurate % loss, we must weight the revenue of normal flights by 20x.
+f_df['Estimated_Revenue'] = np.select(
+    [f_df['CANCELLED'] == 1, is_normal],
+    [0, dist_col * 25 * 20], 
+    default=dist_col * 25
+)
 
 premium_airlines = ['American Airlines Inc.', 'Delta Air Lines Inc.', 'United Air Lines Inc.', 'US Airways Inc.', 'Alaska Airlines Inc.']
 budget_airlines = ['Spirit Air Lines', 'Frontier Airlines Inc.']
@@ -105,8 +117,9 @@ if not f_df.empty:
         with c1:
             loss = f_df.groupby('AIRLINE_NAME')['Cancellation_Penalty'].sum().nlargest(10)
             st.plotly_chart(px.bar(loss, title="Top 10 Airline Losses", 
-                                   template="plotly_dark" if theme_choice=="Dark" else "plotly_white", 
-                                   color_discrete_sequence=['#FF4B4B']), use_container_width=True, key="fin_loss_bar")
+                       template="plotly_dark" if theme_choice=="Dark" else "plotly_white", 
+                       color_discrete_sequence=['#FF4B4B']), 
+                use_container_width=True)
         with c2:
             gain = f_df.groupby('DEST_AIRPORT_NAME')['DIVERTED'].sum().nlargest(10) * 15000
             st.plotly_chart(px.bar(gain, title="Top 10 Airport Revenue Gains", 
@@ -128,7 +141,10 @@ if not f_df.empty:
                 Total_Revenue=('Estimated_Revenue', 'sum'),
                 Total_Penalty=('Cancellation_Penalty', 'sum')
             ).reset_index()
-            airline_fin['Loss_Pct'] = (airline_fin['Total_Penalty'] / airline_fin['Total_Revenue']) * 100
+            
+            # Aligned exactly with Notebook rounding and calculation
+            airline_fin['loss_percentage'] = (airline_fin['Total_Penalty'] / airline_fin['Total_Revenue']).round(4) * 100
+            airline_fin = airline_fin.replace([np.inf, -np.inf], np.nan).fillna(0)
             top_airlines_margin = airline_fin.nlargest(10, 'Total_Revenue')
             
             fig_margin = go.Figure()
@@ -139,12 +155,24 @@ if not f_df.empty:
             
             # Adding percentage text for the manager
             fig_margin.add_trace(go.Scatter(x=top_airlines_margin['AIRLINE_NAME'], y=top_airlines_margin['Total_Revenue'],
-                                            mode='text', text=top_airlines_margin['Loss_Pct'].apply(lambda x: f"{x:.1f}% Loss"),
+                                            mode='text', text=top_airlines_margin['loss_percentage'].apply(lambda x: f"{x:.2f}% Impact"),
                                             textposition="top center", name="Margin Impact %"))
             
             fig_margin.update_layout(title="<b>The Margin Killer: Estimated Revenue vs Crisis Loss</b>",
                                      barmode='group', template="plotly_dark" if theme_choice=="Dark" else "plotly_white", hovermode='x unified')
             st.plotly_chart(fig_margin, use_container_width=True, key="fin_margin_grouped")
+
+        st.divider()
+        # Added the "Real Impact" Chart from the notebook to the dashboard
+        st.subheader("Crisis Vulnerability Index")
+        impact_df = airline_fin.sort_values(by='loss_percentage', ascending=False).head(15)
+        fig_impact = px.bar(impact_df, x='loss_percentage', y='AIRLINE_NAME', orientation='h',
+                            title='<b>The Real Impact: Which Airlines Suffered the Most?</b><br><sup>(Penalty as a % of Total Revenue)</sup>',
+                            labels={'loss_percentage': '% of Revenue Lost', 'AIRLINE_NAME': 'Airline'},
+                            color='loss_percentage', color_continuous_scale='Reds',
+                            template="plotly_dark" if theme_choice=="Dark" else "plotly_white")
+        fig_impact.update_layout(yaxis={'categoryorder':'total ascending'})
+        st.plotly_chart(fig_impact, use_container_width=True, key="fin_impact_bar")
 
         st.divider()
         # New section: Airport Diversion Windfall
