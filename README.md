@@ -8,7 +8,7 @@ The Aviation Crisis Management Simulation is an advanced Business Intelligence (
 Built as a strategic framework, this project acts as a "Crisis Simulator" that helps C-level executives and operations directors understand the domino effect of weather delays, identify bottleneck airports, and calculate estimated financial bleeding versus unplanned revenue during crises.
 
 ## Quick Links
-* **Live Interactive Dashboard:** [View Streamlit App](https://aviationcrisismanagementsimulation-g8tdpjvenk879p6dtn4xc3.streamlit.app/)
+* **Live Interactive Dashboard:** [View Streamlit App](https://aviationcrisismanagementsimulation-jd5fe3nu7bkczbjnc3fvzt.streamlit.app/)
 * **Executive Presentation (Pitch Deck):** [View Gamma Presentation](https://gamma.app/docs/Aviation-Crisis-Management-Financial-Impact-Operational-Efficienc-ku6jklysn7clket)
 * **Data Link in Kaggle:** [kaggle link](https://www.kaggle.com/datasets/usdot/flight-delays)
 
